@@ -63,8 +63,37 @@ class SendCommit(object):
             return False
         return True
 
+    def get_headers(self) -> dict:
+        return {'Content-Type': 'application/json',
+                'authorization': 'Bearer ' + self.get_access_token()}
+
+    def create_product(self) -> dict:
+        url = self.base_url + '/v1/scm/products'
+        data = {
+            "name": self.product_name,
+            "type": "gogs"
+        }
+        res = requests.post(url, data=json.dumps(data),
+                            headers=self.get_headers())
+        return res.json()
+
+    def get_product(self) -> dict:
+        url = self.base_url + '/v1/scm/products'
+        params = {
+            'access_token': self.get_access_token(),
+            'name': self.product_name
+        }
+        res = requests.get(url, params=params)
+        if len(res.json().get('values')) > 0:
+            return res.json().get('values')[0]
+        return {}
+
+    def get_product_id(self) -> str:
+        return self.get_product().get('id', '')
+
     def run(self):
         self.auth()
+        print(self.get_product_id())
 
 
 def main():
