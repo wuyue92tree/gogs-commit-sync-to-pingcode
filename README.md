@@ -1,0 +1,1 @@
+# gogs-commit-sync-to-pingcode
