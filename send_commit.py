@@ -11,14 +11,19 @@ import json
 import os
 import requests
 import tempfile
+import config
 
 
 class SendCommit(object):
     def __init__(self):
         self.base_url = 'https://open.pingcode.com'
-        self.product_name = os.environ['PING_CODE_PRODUCT_NAME']
-        self.client_id = os.environ['PING_CODE_CLIENT_ID']
-        self.client_secret = os.environ['PING_CODE_CLIENT_SECRET']
+        self.product_name = config.PING_CODE_PRODUCT_NAME
+        self.product_server = config.PING_CODE_PRODUCT_SERVER
+        self.repo_name = config.PING_CODE_REPO_NAME
+        self.repo_full_name = config.PING_CODE_REPO_FULL_NAME
+        self.repo_owner_name = config.PING_CODE_REPO_OWNER_NAME
+        self.client_id = config.PING_CODE_CLIENT_ID
+        self.client_secret = config.PING_CODE_CLIENT_SECRET
         self.cache_file = os.path.join(tempfile.gettempdir(),
                                        f'ping_code_{self.product_name}_cache')
 
@@ -91,9 +96,44 @@ class SendCommit(object):
     def get_product_id(self) -> str:
         return self.get_product().get('id', '')
 
+    def create_repo(self, product_id: str) -> dict:
+        url = self.base_url + '/v1/scm/products/' + product_id + '/repositories'
+        data = {
+            "name": config.PING_CODE_REPO_NAME,
+            "full_name": config.PING_CODE_REPO_FULL_NAME,
+            "is_fork": eval(config.PING_CODE_REPO_IS_FORK),
+            "is_private": eval(config.PING_CODE_REPO_IS_PRIVATE),
+            "owner_name": config.PING_CODE_REPO_OWNER_NAME,
+            "html_url": config.PING_CODE_REPO_HTML_URL,
+            "branches_url": config.PING_CODE_REPO_BRANCHES_URL,
+            "commits_url": config.PING_CODE_REPO_COMMITS_URL,
+            "pulls_url": config.PING_CODE_REPO_PULLS_URL
+        }
+        res = requests.post(url, data=json.dumps(data),
+                            headers=self.get_headers())
+        return res.json()
+
+    def get_repo(self, product_id: str) -> dict:
+        url = self.base_url + '/v1/scm/products/' + product_id + '/repositories'
+        params = {
+            'access_token': self.get_access_token(),
+            'full_name': self.repo_full_name
+        }
+        res = requests.get(url, params=params)
+        if len(res.json().get('values')) > 0:
+            return res.json().get('values')[0]
+        return {}
+
+    def get_repo_id(self, product_id: str) -> str:
+        return self.get_repo(product_id).get('id', '')
+
     def run(self):
         self.auth()
-        print(self.get_product_id())
+        product_id = self.get_product_id()
+        print(product_id)
+        self.create_repo(product_id)
+        repo_id = self.get_repo_id(product_id)
+        print(repo_id)
 
 
 def main():
